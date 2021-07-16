@@ -1,0 +1,92 @@
+version: '3.4'
+
+services:
+  postgres:
+    image: postgres
+    container_name: postgres
+    environment:
+      - POSTGRES_PASSWORD=docker
+      - POSTGRES_USER=docker
+      - POSTGRES_DB=postgres
+      - PGDATA=/tmp
+    ports:
+      - 5432:5432
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+
+  rabbitmq:
+    image: local_rabbit
+    restart: always
+    container_name: rabbitmq
+    build:
+      context: rabbitconfig/
+      dockerfile: Dockerfile
+    ports:
+      # The standard AMQP protocol port
+      - 5672:5672
+      # HTTP management UI
+      - 15672:15672
+
+  stamacasa.api:
+    image: ${DOCKER_REGISTRY-}stamacasa-api
+    build:
+      context: .
+      dockerfile: StamAcasa.Api/Dockerfile
+    environment:
+      - ASPNETCORE_URLS=http://+:80
+      - IdentityServerUrl=http://identityserver
+      - ASPNETCORE_ENVIRONMENT=Development
+    ports:
+      - 5008:80
+    depends_on:
+      - identityserver
+      - postgres
+      # volumes:
+      #- ${HOME}/.microsoft/usersecrets/:/root/.microsoft/usersecrets
+      #- ${HOME}/.aspnet/https:/root/.aspnet/https/
+
+  identityserver:
+    image: ${DOCKER_REGISTRY-}stamacasa-identityserver
+    environment:
+      ASPNETCORE_URLS: 'http://+:80'
+      RABBITMQ__USER: admin
+      RABBITMQ__PASSWORD: Corona2020
+      RABBITMQ__HOSTNAME: rabbitmq
+      RABBITMQ__PORT: 5672
+      ASPNETCORE_ENVIRONMENT: Development
+    build:
+      context: .
+      dockerfile: StamAcasa.IdentityServer/Dockerfile
+    ports:
+      - 5001:80
+    container_name: identityserver
+    hostname: identityserver
+    depends_on:
+      - postgres
+
+  stamacasa.email:
+    image: ${DOCKER_REGISTRY-}stamacasa-email
+    build:
+      context: .
+      dockerfile: StamAcasa.EmailService/Dockerfile
+    environment:
+      RABBITMQ__USER: admin
+      RABBITMQ__PASSWORD: Corona2020
+      RABBITMQ__HOSTNAME: rabbitmq
+      RABBITMQ__PORT: 5672
+      SMTP__HOST: smtp.domain.com
+      SMTP__PORT: 587
+      SMTP__USER: email@domain.com
+      SMTP__PASSWORD: password
+      DOTNET_ENVIRONMENT: Development
+
+  stamacasa.jobscheduler:
+    image: ${DOCKER_REGISTRY-}stamacasa-jobscheduler
+    build:
+      context: .
+      dockerfile: StamAcasa.JobScheduler/Dockerfile
+    environment:
+      RABBITMQ__USER: admin
+      RABBITMQ__PASSWORD: Corona2020
+      RABBITMQ__HOSTNAME: rabbitmq
+      RABBITMQ__PORT: 5672

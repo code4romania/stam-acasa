@@ -8,6 +8,7 @@ services:
       - POSTGRES_PASSWORD=docker
       - POSTGRES_USER=docker
       - POSTGRES_DB=postgres
+      - PGDATA=/tmp
     ports:
       - 5432:5432
     volumes:

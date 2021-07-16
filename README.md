@@ -69,6 +69,14 @@ docker-compose -f docker-compose-services.yml -f docker-compose.override.yml up
 ```
 Is also starting the frontend on port `5002`
 
+Alternatively 2: Start only the backend
+(frontend has to be started using the instructions below)
+
+```
+cd backend/src
+docker-compose -f docker-compose-backend-only.yml up
+```
+
 ### Frontend
 1. Install dependencies
 
